@@ -1,0 +1,115 @@
+/* Text marker highlighting styles */
+.text-marker-highlight-yellow {
+  background-color: #ffeb3b !important;
+  color: #000 !important;
+}
+
+.text-marker-highlight-green {
+  background-color: #4caf50 !important;
+  color: #fff !important;
+}
+
+.text-marker-highlight-blue {
+  background-color: #2196f3 !important;
+  color: #fff !important;
+}
+
+.text-marker-highlight-pink {
+  background-color: #e91e63 !important;
+  color: #fff !important;
+}
+
+.text-marker-highlight-orange {
+  background-color: #ff9800 !important;
+  color: #fff !important;
+}
+
+/* Color picker popup styles */
+.text-marker-popup {
+  position: absolute;
+  z-index: 999999;
+  background: white;
+  border: 2px solid #ccc;
+  border-radius: 8px;
+  padding: 15px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  font-family: Arial, sans-serif;
+  display: none;
+}
+
+.text-marker-popup h3 {
+  margin: 0 0 15px 0;
+  font-size: 16px;
+  color: #333;
+  text-align: center;
+}
+
+.text-marker-colors {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.text-marker-color-btn {
+  width: 40px;
+  height: 40px;
+  border: 2px solid #ddd;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.text-marker-color-btn:hover {
+  transform: scale(1.1);
+  border-color: #333;
+}
+
+.text-marker-color-btn.yellow {
+  background-color: #ffeb3b;
+}
+
+.text-marker-color-btn.green {
+  background-color: #4caf50;
+}
+
+.text-marker-color-btn.blue {
+  background-color: #2196f3;
+}
+
+.text-marker-color-btn.pink {
+  background-color: #e91e63;
+}
+
+.text-marker-color-btn.orange {
+  background-color: #ff9800;
+}
+
+.text-marker-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.text-marker-btn {
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: #f5f5f5;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background-color 0.2s;
+}
+
+.text-marker-btn:hover {
+  background-color: #e0e0e0;
+}
+
+.text-marker-btn.remove {
+  background-color: #ff4444;
+  color: white;
+  border-color: #cc0000;
+}
+
+.text-marker-btn.remove:hover {
+  background-color: #cc0000;
+}

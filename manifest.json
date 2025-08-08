@@ -1,0 +1,51 @@
+{
+  "manifest_version": 3,
+  "name": "Text Marker – Powerful Webpage Text Highlighter",
+  "version": "1.0.0",
+  "description": "Highlight text with different colors and save selections, restore after page reload",
+  "permissions": [
+    "storage",
+    "tabs",
+    "activeTab"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Text Marker – Powerful Webpage Text Highlighter",
+    "default_icon": {
+      "16": "icons/text_marker_16.png",
+      "32": "icons/text_marker_32.png",
+      "48": "icons/text_marker_48.png",
+      "128": "icons/text_marker_128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/text_marker_16.png",
+    "32": "icons/text_marker_32.png",
+    "48": "icons/text_marker_48.png",
+    "128": "icons/text_marker_128.png"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "css": [
+        "styles.css"
+      ],
+      "run_at": "document_end"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "popup.html"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ]
+}
