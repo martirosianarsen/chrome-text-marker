@@ -1,4 +1,4 @@
-# Text Marker – Powerful Webpage Text Highlighter & Annotator
+# Text Marker – Powerful Webpage Text Highlighter
 ---
 [![Chrome Web Store](https://img.shields.io/chrome-web-store/v/njeijdibkglhjgjcjlpkapbojpegfcll.svg?label=Chrome%20Web%20Store)](https://chromewebstore.google.com/detail/njeijdibkglhjgjcjlpkapbojpegfcll?utm_source=item-share-cb)
 [![Users](https://img.shields.io/chrome-web-store/users/njeijdibkglhjgjcjlpkapbojpegfcll.svg)](https://chromewebstore.google.com/detail/njeijdibkglhjgjcjlpkapbojpegfcll?utm_source=item-share-cb)
