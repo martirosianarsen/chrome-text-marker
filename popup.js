@@ -1,5 +1,5 @@
 'use strict';
-const { KEY, COLORS, pageKey, entries } = TextMarker;
+const { KEY, PALETTE_KEY, COLORS, paletteFrom, pageKey, entries } = TextMarker;
 const $ = id => document.getElementById(id);
 let saved = [], url = '', tabId, all = false, pendingClear = null;
 function status(message) { $('status').textContent = message; $('status').hidden = !message; }
@@ -22,7 +22,7 @@ function render() {
   }
   for (const item of visible) {
     const card = document.createElement('article'); card.className = 'card';
-    const dot = document.createElement('span'); dot.className = 'color-dot'; dot.style.background = COLORS[item.color];
+    const dot = document.createElement('span'); dot.className = 'color-dot'; dot.style.background = TextMarker.colorValue(item.color);
     const content = document.createElement('div'); content.className = 'card-content';
     const quote = document.createElement('button'); quote.className = 'quote'; quote.textContent = item.text; quote.title = 'Go to highlight';
     quote.onclick = () => focus(item);
@@ -62,6 +62,7 @@ function setScope(value) {
   $('list').setAttribute('aria-labelledby',all ? 'allTab' : 'pageTab');
   $('confirm').hidden = true; pendingClear = null; render();
 }
+$('settings').onclick = () => chrome.runtime.openOptionsPage();
 $('pageTab').onclick = () => setScope(false); $('allTab').onclick = () => setScope(true);
 for (const id of ['pageTab','allTab']) $(id).onkeydown = event => { if (['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) { event.preventDefault(); setScope(event.key === 'End' || (event.key !== 'Home' && !all)); $(all ? 'allTab' : 'pageTab').focus(); } };
 $('search').oninput = render;
@@ -95,7 +96,9 @@ $('export').onclick = () => {
   setTimeout(() => URL.revokeObjectURL(address),30000);
   status('Export started. Keep the JSON file as a copy of your highlights.');
 };
-chrome.storage.onChanged.addListener((changes, area) => { if (area === 'local' && changes[KEY]) load(); });
+function renderHintPalette(value) { const palette = Object.values(paletteFrom(value)); document.querySelectorAll('.selection-hint .palette i').forEach((node,index) => node.style.setProperty('--color',palette[index])); }
+chrome.storage.local.get(PALETTE_KEY).then(result => renderHintPalette(result[PALETTE_KEY])).catch(() => {});
+chrome.storage.onChanged.addListener((changes, area) => { if (area !== 'local') return; if (changes[KEY]) load(); if (changes[PALETTE_KEY]) renderHintPalette(changes[PALETTE_KEY].newValue); });
 (async () => {
   try {
     const [tab] = await chrome.tabs.query({active:true,currentWindow:true});

@@ -2,7 +2,7 @@
   'use strict';
   if (globalThis.__textMarkerLoaded) return;
   globalThis.__textMarkerLoaded = true;
-  const { KEY, COLORS, pageKey, entries } = TextMarker;
+  const { KEY, PALETTE_KEY, COLORS, paletteFrom, pageKey, entries } = TextMarker;
   const ATTR = 'data-text-marker-id';
   const excluded = 'script,style,noscript,textarea,input,select,option,[contenteditable]:not([contenteditable="false"]),[data-text-marker-ui]';
   let selected = null, currentUrl = pageKey(location.href), records = [], scheduled, syncing = false;
@@ -12,17 +12,24 @@
   const root = host.attachShadow({ mode: 'open' });
   root.innerHTML = `<style>
     :host{color-scheme:light}*{box-sizing:border-box}section{width:252px;padding:14px;background:#fff;border:1px solid #e4e5e9;border-radius:16px;box-shadow:0 8px 32px #202b3824;font:13px system-ui;color:#26352f}
-    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}strong{font-size:12px;font-weight:650}small{font-size:10px;color:#78847c}.colors{display:flex;gap:10px}button{cursor:pointer;font:inherit;border:0;background:transparent;color:inherit}button:focus-visible{outline:2px solid #22664d;outline-offset:3px}.swatch{width:36px;height:36px;border-radius:50%;border:1px solid #00000012;transition:transform .15s}.swatch:hover{transform:translateY(-3px)}footer{display:flex;justify-content:space-between;align-items:center;margin-top:12px}.copy{font-size:11px;color:#316c50;padding:4px 6px;border:1px solid #e4e5e9;border-radius:5px}.remove{font-size:11px;color:#9e433b;padding:4px 0}.close{font-size:18px;line-height:1;padding:0 3px}p{margin:9px 0 0;font-size:11px;line-height:1.5;color:#9e433b}[hidden]{display:none}
+    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}strong{font-size:12px;font-weight:650}small{font-size:10px;color:#78847c}.colors{display:flex;gap:10px}button{cursor:pointer;font:inherit;border:0;background:transparent;color:inherit}button:focus-visible{outline:2px solid #22664d;outline-offset:3px}.swatch{width:36px;height:36px;border-radius:50%;border:1px solid #00000012;transition:transform .15s}.swatch:hover{transform:translateY(-3px)}footer{display:flex;justify-content:space-between;align-items:center;margin-top:12px}.custom{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:12px;padding-top:10px;border-top:1px solid #e4e5e9;font-size:11px}.custom label{display:flex;align-items:center;gap:8px}.custom input{width:30px;height:26px;padding:1px;border:1px solid #e4e5e9;border-radius:5px;cursor:pointer;background:white}.custom button{background:#edf2e7;border-radius:5px;padding:5px 8px;color:#316c50}.copy{font-size:11px;color:#316c50;padding:4px 6px;border:1px solid #e4e5e9;border-radius:5px}.remove{font-size:11px;color:#9e433b;padding:4px 0}.close{font-size:18px;line-height:1;padding:0 3px}p{margin:9px 0 0;font-size:11px;line-height:1.5;color:#9e433b}[hidden]{display:none}
     @media(prefers-reduced-motion:reduce){*{transition:none!important}}
-  </style><section role="dialog" aria-label="Highlight selected text"><header><strong>Mark this moment</strong><button class="close" aria-label="Close color picker">×</button></header><div class="colors"></div><footer><small>Text Marker</small><button class="copy">Copy text</button><button class="remove" hidden>Remove</button></footer><p role="status" hidden></p></section>`;
+  </style><section role="dialog" aria-label="Highlight selected text"><header><strong>Mark this moment</strong><button class="close" aria-label="Close color picker">×</button></header><div class="colors"></div><div class="custom"><label>Custom color <input type="color" aria-label="Custom highlight color" value="#b8b3f6"></label><button class="custom-apply" aria-label="Apply custom highlight color">Apply</button></div><footer><small>Text Marker</small><button class="copy">Copy text</button><button class="remove" hidden>Remove</button></footer><p role="status" hidden></p></section>`;
   document.documentElement.append(host);
-  for (const [color, hex] of Object.entries(COLORS)) {
-    const button = document.createElement('button');
-    button.className = 'swatch'; button.style.background = hex;
-    button.setAttribute('aria-label', `Highlight ${color}`); button.title = color;
-    button.addEventListener('click', () => add(color));
-    root.querySelector('.colors').append(button);
+  let palette = { ...COLORS };
+  function renderPalette() {
+    root.querySelector('.colors').replaceChildren();
+    Object.entries(palette).forEach(([name, hex], index) => {
+      const button = document.createElement('button');
+      button.className = 'swatch'; button.style.background = hex;
+      button.setAttribute('aria-label', `Highlight preset ${index + 1}`); button.title = `Color ${index + 1}: ${hex}`;
+      button.addEventListener('click', () => add(hex));
+      root.querySelector('.colors').append(button);
+    });
   }
+  renderPalette();
+  chrome.storage.local.get(PALETTE_KEY).then(result => { palette = paletteFrom(result[PALETTE_KEY]); renderPalette(); }).catch(() => {});
+  root.querySelector('.custom-apply').onclick = () => add(root.querySelector('input[type=color]').value);
   root.querySelector('.close').onclick = hide;
   root.querySelector('.copy').onclick = async () => {
     const text = selected?.range?.toString() || records.find(item => item.id === selected?.id)?.text;
@@ -34,7 +41,7 @@
     const id = selected?.id;
     if (id && await mutate({ operation: 'remove', id })) { unwrap(id); hide(); }
   };
-  root.addEventListener('pointerdown', event => event.preventDefault());
+  root.addEventListener('pointerdown', event => { if (!event.target.closest('input,label')) event.preventDefault(); });
   function hide() { host.style.display = 'none'; selected = null; }
   function error(text) { const node = root.querySelector('p'); node.textContent = text; node.style.color = '#9e433b'; node.hidden = false; }
   async function mutate(change) {
@@ -74,8 +81,8 @@
       range.setEnd(part.node, Math.min(part.node.length, end - part.start));
       const span = document.createElement('span');
       span.setAttribute(ATTR, item.id); span.className = 'text-marker-highlight';
-      span.style.setProperty('background-color', COLORS[item.color] || COLORS.yellow, 'important');
-      span.style.setProperty('color', '#192b25', 'important');
+      span.style.setProperty('background-color', TextMarker.colorValue(item.color), 'important');
+      span.style.setProperty('color', TextMarker.foreground(item.color), 'important');
       range.surroundContents(span);
     }
     return true;
@@ -162,7 +169,7 @@
   });
   document.addEventListener('scroll', hide, { passive: true });
   window.addEventListener('resize', hide);
-  chrome.storage.onChanged.addListener((changes, area) => { if (area === 'local' && changes[KEY]) load(); });
+  chrome.storage.onChanged.addListener((changes, area) => { if (area !== 'local') return; if (changes[KEY]) load(); if (changes[PALETTE_KEY]) { palette = paletteFrom(changes[PALETTE_KEY].newValue); renderPalette(); } });
   chrome.runtime.onMessage.addListener((message, sender, respond) => {
     if (message?.type !== 'marker:focus') return;
     const span = [...document.querySelectorAll(`[${ATTR}]`)].find(node => node.getAttribute(ATTR) === message.id);

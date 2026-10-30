@@ -4,15 +4,16 @@ Update the existing listing, item ID `njeijdibkglhjgjcjlpkapbojpegfcll`. Do not 
 
 ## Short description
 
-Highlight passages in five colors. Find, revisit and export your saved highlights. Private, local, and free.
+Highlight passages in your favorite colors. Find, revisit and export your saved highlights. Private, local, and free.
 
 ## Detailed description
 
 Keep the words that stay with you.
 
-Text Marker is a simple, private way to collect meaningful passages as you read. Select text on a webpage and choose one of five soft highlight colors. Your highlights are saved on your device and restored when you return to the page.
+Text Marker is a simple, private way to collect meaningful passages as you read. Select text on a webpage and choose one of five soft highlight colors, or use the color picker for a custom color. Your highlights are saved on your device and restored when you return to the page.
 
-• A clean, calm interface with yellow, green, blue, pink, and orange highlights.
+• A clean, calm interface with five preset colors and a custom color picker.
+• Set your preferred five-color palette in a dedicated settings page.
 • Copy selected text or any saved highlight with a single click.
 • Browse highlights from the current page or your whole collection.
 • Search by passage, page title, or address.

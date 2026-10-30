@@ -4,7 +4,7 @@ Privacy policy · Updated October 30, 2026 · Version 1.1.0
 
 ## What is saved
 
-When you highlight text, Text Marker stores the selected passage, its color, the page URL and title, the creation time, and nearby text and position needed to find it again. These records remain in Chrome's local extension storage on your device.
+When you highlight text, Text Marker stores the selected passage, its color, the page URL and title, the creation time, and nearby text and position needed to find it again. Your preferred five-color palette is also stored locally as a preference. These records remain in Chrome's local extension storage on your device.
 
 ## What leaves your device
 

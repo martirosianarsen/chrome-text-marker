@@ -14,7 +14,7 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
     const url = pageKey(sender.url?.startsWith('chrome-extension:') ? message.url : (sender.tab?.url || message.url));
     if (!/^https?:/.test(url)) throw new Error('This page is not supported.');
     if (message.operation === 'add') {
-      if (!valid(message.item) || !Object.hasOwn(TextMarker.COLORS, message.item.color)) throw new Error('Invalid highlight.');
+      if (!valid(message.item) || !TextMarker.isColor(message.item.color)) throw new Error('Invalid highlight.');
       // Consolidate old hash-specific records without discarding existing highlights.
       const list = entries(stored).filter(item => pageKey(item.pageUrl) === url);
       for (const key of Object.keys(stored)) if (pageKey(key) === url) delete stored[key];

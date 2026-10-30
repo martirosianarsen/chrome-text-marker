@@ -7,7 +7,7 @@ root = Path(__file__).resolve().parents[1]
 manifest = json.loads((root / 'manifest.json').read_text())
 out = Path(sys.argv[1]) if len(sys.argv) > 1 else root / 'dist'
 out.mkdir(parents=True, exist_ok=True)
-files = ['manifest.json', 'background.js', 'shared.js', 'content.js', 'styles.css', 'popup.html', 'popup.css', 'popup.js', 'privacy.html', 'privacy.css']
+files = ['manifest.json', 'background.js', 'shared.js', 'content.js', 'styles.css', 'popup.html', 'popup.css', 'popup.js', 'privacy.html', 'privacy.css', 'settings.html', 'settings.css', 'settings.js']
 files += [f'icons/text_marker_{size}.png' for size in (16,32,48,128)]
 for name in files:
     if not (root / name).is_file():

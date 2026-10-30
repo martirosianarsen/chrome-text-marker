@@ -27,7 +27,7 @@ async function select(page, selector, start=0, end) {
   },{start,end});
   await expect(page.getByRole('dialog')).toBeVisible();
 }
-async function mark(page, selector, color='yellow', start=0, end) { await select(page,selector,start,end); await page.getByRole('button',{name:`Highlight ${color}`,exact:true}).click(); await expect(page.getByRole('dialog')).toBeHidden(); }
+async function mark(page, selector, color='yellow', start=0, end) { await select(page,selector,start,end); await page.getByRole('button',{name:`Highlight preset ${['yellow','green','blue','pink','orange'].indexOf(color)+1}`,exact:true}).click(); await expect(page.getByRole('dialog')).toBeHidden(); }
 async function data() { return worker.evaluate(async () => (await chrome.storage.local.get('text-marker-highlights'))['text-marker-highlights'] || {}); }
 async function popup() { const p = await context.newPage(); await p.goto(`chrome-extension://${extensionId}/popup.html`); return p; }
 test('cross-element selection preserves markup, reload restores, deletion syncs', async () => {
@@ -115,7 +115,7 @@ test('copies selected text and saved passages to the clipboard',async () => {
   await context.grantPermissions(['clipboard-read','clipboard-write'],{origin:base});
   await select(page,'#safe'); await page.getByRole('button',{name:'Copy text',exact:true}).click();
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('A page worth remembering.');
-  await page.getByRole('button',{name:'Highlight yellow',exact:true}).click();
+  await page.getByRole('button',{name:'Highlight preset 1',exact:true}).click();
   const p = await popup();
   await p.getByRole('tab',{name:'All pages'}).click();
   await p.getByRole('button',{name:/Copy highlight:/}).click();
@@ -145,4 +145,51 @@ test('delete all requires confirmation, respects cancellation, and clears every 
   await expect(p.locator('#clearAll')).toBeHidden();
   await expect(p.getByRole('status')).toHaveText('All highlights deleted from every page.');
   await p.close(); await a.close(); await b.close();
+});
+
+test('custom color persists through reload, remains readable, and appears in the popup',async () => {
+  const page=await open('/custom');
+  await select(page,'#safe');
+  await page.getByLabel('Custom highlight color',{exact:true}).fill('#31205f');
+  await page.getByRole('button',{name:'Apply custom highlight color',exact:true}).click();
+  await expect(page.getByRole('dialog')).toBeHidden();
+  expect(Object.values(await data())[0][0].color).toBe('#31205f');
+  await expect(page.locator('#safe [data-text-marker-id]')).toHaveCSS('background-color','rgb(49, 32, 95)');
+  await expect(page.locator('#safe [data-text-marker-id]')).toHaveCSS('color','rgb(255, 255, 255)');
+  await page.reload();
+  await expect(page.locator('#safe [data-text-marker-id]')).toHaveCSS('background-color','rgb(49, 32, 95)');
+  const p=await popup(); await p.getByRole('tab',{name:'All pages'}).click();
+  await expect(p.locator('.color-dot')).toHaveCSS('background-color','rgb(49, 32, 95)');
+  const rejected=await p.evaluate(async url => chrome.runtime.sendMessage({type:'marker:mutate',operation:'add',url,item:{id:'bad',text:'bad',color:'url(https://invalid.test/)'}}),base+'/custom');
+  expect(rejected.ok).toBe(false);
+  expect(Object.values(await data())[0]).toHaveLength(1);
+  await p.close(); await page.close();
+});
+
+test('color settings save a live palette, preserve old marks, persist, and reset',async () => {
+  const page=await open('/palette-settings'); await mark(page,'#safe');
+  const p=await popup();
+  const opened=context.waitForEvent('page'); await p.getByRole('button',{name:'Color settings',exact:true}).click();
+  const settings=await opened; await settings.waitForURL(`chrome-extension://${extensionId}/settings.html`);
+  await expect(settings.getByLabel('Preset color 1',{exact:true})).toHaveValue('#ffe58a');
+  await settings.getByLabel('Preset color 1',{exact:true}).fill('#31205f');
+  await settings.getByRole('button',{name:'Save colors',exact:true}).click();
+  await expect(settings.getByRole('status')).toContainText('Colors saved');
+  await select(page,'#mixed');
+  await expect(page.getByRole('button',{name:'Highlight preset 1',exact:true})).toHaveCSS('background-color','rgb(49, 32, 95)');
+  await page.getByRole('button',{name:'Highlight preset 1',exact:true}).click();
+  await expect(page.locator('#safe [data-text-marker-id]')).toHaveCSS('background-color','rgb(255, 229, 138)');
+  await expect(page.locator('#mixed [data-text-marker-id]').first()).toHaveCSS('background-color','rgb(49, 32, 95)');
+  await settings.reload(); await expect(settings.getByLabel('Preset color 1',{exact:true})).toHaveValue('#31205f');
+  await p.getByRole('tab',{name:'All pages'}).click();
+  await p.getByRole('button',{name:'Delete all highlights',exact:true}).click(); await p.locator('#confirmClear').click();
+  await expect.poll(data).toEqual({});
+  expect(await worker.evaluate(async () => (await chrome.storage.local.get('text-marker-palette'))['text-marker-palette'].yellow)).toBe('#31205f');
+  await settings.getByRole('button',{name:'Restore defaults',exact:true}).click();
+  await expect(settings.getByLabel('Preset color 1',{exact:true})).toHaveValue('#ffe58a');
+  await settings.getByRole('button',{name:'Save colors',exact:true}).click();
+  await expect(settings.getByRole('status')).toContainText('Colors saved');
+  await select(page,'#mixed');
+  await expect(page.getByRole('button',{name:'Highlight preset 1',exact:true})).toHaveCSS('background-color','rgb(255, 229, 138)');
+  await p.close();await settings.close();await page.close();
 });
