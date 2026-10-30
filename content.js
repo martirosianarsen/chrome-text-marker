@@ -1,613 +1,176 @@
-;(function () {
-  'use strict'
-
-  const STORAGE_KEY = 'text-marker-highlights'
-  const pageUrl = window.location.href
-  let popup = null
-  let currentSelection = null
-
-  console.log('🚀 Text Marker Content Script initializing...')
-  console.log('🌐 Current page URL:', pageUrl)
-
-  function init () {
-    console.log('🎯 Starting initialization...')
-    createPopup()
-    setupEventListeners()
-    loadHighlights()
-    console.log('✅ Text Marker Content Script initialized successfully')
+(() => {
+  'use strict';
+  if (globalThis.__textMarkerLoaded) return;
+  globalThis.__textMarkerLoaded = true;
+  const { KEY, COLORS, pageKey, entries } = TextMarker;
+  const ATTR = 'data-text-marker-id';
+  const excluded = 'script,style,noscript,textarea,input,select,option,[contenteditable]:not([contenteditable="false"]),[data-text-marker-ui]';
+  let selected = null, currentUrl = pageKey(location.href), records = [], scheduled, syncing = false;
+  const host = document.createElement('div');
+  host.setAttribute('data-text-marker-ui', '');
+  host.style.cssText = 'all:initial;position:fixed;z-index:2147483647;display:none;';
+  const root = host.attachShadow({ mode: 'open' });
+  root.innerHTML = `<style>
+    :host{color-scheme:light}*{box-sizing:border-box}section{width:252px;padding:14px;background:#fff;border:1px solid #e4e5e9;border-radius:16px;box-shadow:0 8px 32px #202b3824;font:13px system-ui;color:#26352f}
+    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}strong{font-size:12px;font-weight:650}small{font-size:10px;color:#78847c}.colors{display:flex;gap:10px}button{cursor:pointer;font:inherit;border:0;background:transparent;color:inherit}button:focus-visible{outline:2px solid #22664d;outline-offset:3px}.swatch{width:36px;height:36px;border-radius:50%;border:1px solid #00000012;transition:transform .15s}.swatch:hover{transform:translateY(-3px)}footer{display:flex;justify-content:space-between;align-items:center;margin-top:12px}.copy{font-size:11px;color:#316c50;padding:4px 6px;border:1px solid #e4e5e9;border-radius:5px}.remove{font-size:11px;color:#9e433b;padding:4px 0}.close{font-size:18px;line-height:1;padding:0 3px}p{margin:9px 0 0;font-size:11px;line-height:1.5;color:#9e433b}[hidden]{display:none}
+    @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+  </style><section role="dialog" aria-label="Highlight selected text"><header><strong>Mark this moment</strong><button class="close" aria-label="Close color picker">×</button></header><div class="colors"></div><footer><small>Text Marker</small><button class="copy">Copy text</button><button class="remove" hidden>Remove</button></footer><p role="status" hidden></p></section>`;
+  document.documentElement.append(host);
+  for (const [color, hex] of Object.entries(COLORS)) {
+    const button = document.createElement('button');
+    button.className = 'swatch'; button.style.background = hex;
+    button.setAttribute('aria-label', `Highlight ${color}`); button.title = color;
+    button.addEventListener('click', () => add(color));
+    root.querySelector('.colors').append(button);
   }
-
-  function createPopup () {
-    console.log('🎨 Creating color selection popup...')
-
-    popup = document.createElement('div')
-    popup.className = 'text-marker-popup'
-    popup.innerHTML = `
-        <h3>Choose Color</h3>
-        <div class="text-marker-colors">
-          <div class="text-marker-color-btn yellow" data-color="yellow" title="Yellow"></div>
-          <div class="text-marker-color-btn green" data-color="green" title="Green"></div>
-          <div class="text-marker-color-btn blue" data-color="blue" title="Blue"></div>
-          <div class="text-marker-color-btn pink" data-color="pink" title="Pink"></div>
-          <div class="text-marker-color-btn orange" data-color="orange" title="Orange"></div>
-        </div>
-        <div class="text-marker-actions">
-          <button class="text-marker-btn remove">Remove</button>
-          <button class="text-marker-btn cancel">Cancel</button>
-        </div>
-      `
-
-    // Add CSS styles
-    addStyles()
-
-    document.body.appendChild(popup)
-    console.log('✅ Popup created and added to DOM')
-
-    // Setup color button listeners
-    popup.querySelectorAll('.text-marker-color-btn').forEach(btn => {
-      btn.addEventListener('click', e => {
-        e.preventDefault()
-        e.stopPropagation()
-        const color = e.target.dataset.color
-        console.log('🎨 Color selected:', color)
-        highlightSelection(color)
-        hidePopup()
-      })
-    })
-
-    // Setup remove button listener
-    popup
-      .querySelector('.text-marker-btn.remove')
-      .addEventListener('click', e => {
-        e.preventDefault()
-        e.stopPropagation()
-        console.log('🗑️ Remove button clicked')
-        removeHighlight()
-        hidePopup()
-      })
-
-    // Setup cancel button listener
-    popup
-      .querySelector('.text-marker-btn.cancel')
-      .addEventListener('click', e => {
-        e.preventDefault()
-        e.stopPropagation()
-        console.log('❌ Cancel button clicked')
-        hidePopup()
-      })
-
-    console.log('🎯 Popup event listeners set up')
-  }
-
-  function addStyles () {
-    const styleId = 'text-marker-styles'
-    if (document.getElementById(styleId)) return
-
-    const styles = `
-      .text-marker-popup {
-        position: absolute;
-        z-index: 10000;
-        background: white;
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        padding: 16px;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        font-size: 14px;
-        display: none;
-        min-width: 200px;
-      }
-      
-      .text-marker-popup h3 {
-        margin: 0 0 12px 0;
-        font-size: 14px;
-        font-weight: 600;
-        color: #333;
-      }
-      
-      .text-marker-colors {
-        display: flex;
-        gap: 8px;
-        margin-bottom: 12px;
-      }
-      
-      .text-marker-color-btn {
-        width: 24px;
-        height: 24px;
-        border-radius: 50%;
-        cursor: pointer;
-        border: 2px solid #fff;
-        box-shadow: 0 0 0 1px rgba(0,0,0,0.1);
-        transition: transform 0.2s;
-      }
-      
-      .text-marker-color-btn:hover {
-        transform: scale(1.1);
-      }
-      
-      .text-marker-color-btn.yellow { background-color: #ffeb3b; }
-      .text-marker-color-btn.green { background-color: #4caf50; }
-      .text-marker-color-btn.blue { background-color: #2196f3; }
-      .text-marker-color-btn.pink { background-color: #e91e63; }
-      .text-marker-color-btn.orange { background-color: #ff9800; }
-      
-      .text-marker-actions {
-        display: flex;
-        gap: 8px;
-      }
-      
-      .text-marker-btn {
-        flex: 1;
-        padding: 6px 12px;
-        border: 1px solid #ddd;
-        background: white;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 12px;
-        transition: background-color 0.2s;
-      }
-      
-      .text-marker-btn:hover {
-        background-color: #f5f5f5;
-      }
-      
-      .text-marker-btn.remove {
-        background-color: #dc3545;
-        color: white;
-        border-color: #dc3545;
-      }
-      
-      .text-marker-btn.remove:hover {
-        background-color: #c82333;
-      }
-      
-      .text-marker-highlight-yellow {
-        background-color: rgba(255, 235, 59, 0.3);
-        border-radius: 2px;
-      }
-      
-      .text-marker-highlight-green {
-        background-color: rgba(76, 175, 80, 0.3);
-        border-radius: 2px;
-      }
-      
-      .text-marker-highlight-blue {
-        background-color: rgba(33, 150, 243, 0.3);
-        border-radius: 2px;
-      }
-      
-      .text-marker-highlight-pink {
-        background-color: rgba(233, 30, 99, 0.3);
-        border-radius: 2px;
-      }
-      
-      .text-marker-highlight-orange {
-        background-color: rgba(255, 152, 0, 0.3);
-        border-radius: 2px;
-      }
-      
-      [data-marker-id] {
-        cursor: pointer;
-        transition: background-color 0.2s;
-      }
-      
-      [data-marker-id]:hover {
-        filter: brightness(0.9);
-      }
-    `
-
-    const styleElement = document.createElement('style')
-    styleElement.id = styleId
-    styleElement.textContent = styles
-    document.head.appendChild(styleElement)
-    console.log('🎨 Styles added to page')
-  }
-
-  function setupEventListeners () {
-    console.log('👂 Setting up event listeners...')
-    let isPopupVisible = false
-
-    // Listen for messages from popup
-    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-      console.log('📨 Message received:', request)
-
-      if (request.action === 'removeHighlight') {
-        console.log('🗑️ Remove highlight request:', request.highlightId)
-        removeHighlightById(request.highlightId)
-        sendResponse({ success: true })
-      } else if (request.action === 'clearHighlights') {
-        console.log('🧹 Clear all highlights request')
-        clearAllHighlightsFromPage()
-        sendResponse({ success: true })
-      }
-      return true
-    })
-
-    // Handle text selection
-    document.addEventListener('mouseup', e => {
-      if (!popup || popup.contains(e.target)) return
-      if (e.target.closest('[class^="text-marker-highlight"]')) return
-
-      setTimeout(() => {
-        const selection = window.getSelection()
-        if (selection.rangeCount > 0 && !selection.isCollapsed) {
-          const selectedText = selection.toString().trim()
-          if (selectedText.length > 0) {
-            console.log(
-              '📝 Text selected:',
-              selectedText.substring(0, 50) + '...'
-            )
-
-            const range = selection.getRangeAt(0)
-            currentSelection = {
-              range: range.cloneRange(),
-              text: selectedText
-            }
-            isPopupVisible = true
-            showPopup(e.pageX, e.pageY)
-          }
-        }
-      }, 50)
-    })
-
-    // Handle clicks outside popup
-    document.addEventListener('click', e => {
-      if (
-        isPopupVisible &&
-        !popup.contains(e.target) &&
-        !e.target.closest('[class^="text-marker-highlight"]')
-      ) {
-        console.log('👆 Click outside popup - hiding')
-        isPopupVisible = false
-        hidePopup()
-      }
-    })
-
-    // Prevent popup from closing when interacting with it
-    popup.addEventListener('mousedown', e => e.stopPropagation())
-    popup.addEventListener('mouseup', e => e.stopPropagation())
-    popup.addEventListener('click', e => e.stopPropagation())
-
-    console.log('✅ Event listeners set up')
-  }
-
-  async function removeHighlightById (highlightId) {
-    console.log('🗑️ Removing highlight by ID:', highlightId)
-
-    const element = document.querySelector(`[data-marker-id="${highlightId}"]`)
-    if (element) {
-      console.log('📍 Found highlight element to remove')
-      await removeHighlightFromStorage(highlightId)
-
-      const parent = element.parentNode
-      parent.replaceChild(document.createTextNode(element.textContent), element)
-      parent.normalize()
-
-      console.log('✅ Highlight removed from page')
-    } else {
-      console.warn('⚠️ Highlight element not found:', highlightId)
-    }
-  }
-
-  async function clearAllHighlightsFromPage () {
-    console.log('🧹 Clearing all highlights from page...')
-
-    const highlights = document.querySelectorAll('[data-marker-id]')
-    console.log('📊 Found highlights to clear:', highlights.length)
-
-    highlights.forEach(el => {
-      const parent = el.parentNode
-      parent.replaceChild(document.createTextNode(el.textContent), el)
-      parent.normalize()
-    })
-
-    // Clear from storage
+  root.querySelector('.close').onclick = hide;
+  root.querySelector('.copy').onclick = async () => {
+    const text = selected?.range?.toString() || records.find(item => item.id === selected?.id)?.text;
+    if (!text) return;
+    try { await TextMarker.copy(text); const node = root.querySelector('p'); node.textContent = 'Copied to clipboard.'; node.style.color = '#316c50'; node.hidden = false; }
+    catch { error('Could not copy. Try copying from the Text Marker popup.'); }
+  };
+  root.querySelector('.remove').onclick = async () => {
+    const id = selected?.id;
+    if (id && await mutate({ operation: 'remove', id })) { unwrap(id); hide(); }
+  };
+  root.addEventListener('pointerdown', event => event.preventDefault());
+  function hide() { host.style.display = 'none'; selected = null; }
+  function error(text) { const node = root.querySelector('p'); node.textContent = text; node.style.color = '#9e433b'; node.hidden = false; }
+  async function mutate(change) {
     try {
-      const result = await chrome.storage.local.get([STORAGE_KEY])
-      const stored = result[STORAGE_KEY] || {}
-      delete stored[pageUrl]
-      await chrome.storage.local.set({ [STORAGE_KEY]: stored })
-      console.log('✅ All highlights cleared from storage')
-    } catch (error) {
-      console.error('❌ Error clearing highlights from storage:', error)
+      const result = await chrome.runtime.sendMessage({ type: 'marker:mutate', url: currentUrl, ...change });
+      if (!result?.ok) throw new Error(result?.error);
+      return true;
+    } catch { error('Could not save. Reopen this page or check available browser storage.'); return false; }
+  }
+  function textMap() {
+    const nodes = []; let text = '';
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, { acceptNode(node) {
+      return node.parentElement?.closest(excluded) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT;
+    }});
+    let node;
+    while ((node = walker.nextNode())) { nodes.push({ node, start: text.length, end: text.length + node.length }); text += node.data; }
+    return { nodes, text };
+  }
+  function offsets(range, map) {
+    let start = null, end = null;
+    for (const part of map.nodes) {
+      if (!range.intersectsNode(part.node)) continue;
+      const from = range.startContainer === part.node ? range.startOffset : 0;
+      const to = range.endContainer === part.node ? range.endOffset : part.node.length;
+      if (to <= from) continue;
+      if (start === null) start = part.start + from;
+      end = part.start + to;
+    }
+    return start === null ? null : { start, end };
+  }
+  function paint(item, start, end, map) {
+    const parts = map.nodes.filter(part => part.end > start && part.start < end);
+    if (parts.some(part => part.node.parentElement.closest(`[${ATTR}]`))) return false;
+    for (const part of parts.reverse()) {
+      const range = document.createRange();
+      range.setStart(part.node, Math.max(0, start - part.start));
+      range.setEnd(part.node, Math.min(part.node.length, end - part.start));
+      const span = document.createElement('span');
+      span.setAttribute(ATTR, item.id); span.className = 'text-marker-highlight';
+      span.style.setProperty('background-color', COLORS[item.color] || COLORS.yellow, 'important');
+      span.style.setProperty('color', '#192b25', 'important');
+      range.surroundContents(span);
+    }
+    return true;
+  }
+  function unwrap(id) {
+    for (const span of document.querySelectorAll(`[${ATTR}]`)) {
+      if (id && span.getAttribute(ATTR) !== id) continue;
+      const parent = span.parentNode;
+      span.replaceWith(...span.childNodes); parent.normalize();
     }
   }
-
-  function showPopup (x, y) {
-    if (!popup) return
-
-    console.log('👁️ Showing popup at:', { x, y })
-
-    popup.style.display = 'block'
-    popup.style.left = x + 'px'
-    popup.style.top = y + 10 + 'px'
-
-    // Adjust position if popup goes off screen
-    const rect = popup.getBoundingClientRect()
-    if (rect.right > window.innerWidth) {
-      popup.style.left = window.innerWidth - rect.width - 10 + 'px'
+  function locate(item, text) {
+    if (item.anchor && text.slice(item.anchor.start, item.anchor.end) === item.text) return item.anchor.start;
+    const matches = []; let at = text.indexOf(item.text);
+    while (at !== -1) { matches.push(at); at = text.indexOf(item.text, at + 1); }
+    if (matches.length === 1) return matches[0];
+    if (item.anchor) {
+      const ranked = matches.map(start => ({ start, score:
+        (item.anchor.prefix && text.slice(Math.max(0, start - item.anchor.prefix.length), start) === item.anchor.prefix ? 1 : 0) +
+        (item.anchor.suffix && text.slice(start + item.text.length, start + item.text.length + item.anchor.suffix.length) === item.anchor.suffix ? 1 : 0) }));
+      ranked.sort((a,b) => b.score - a.score);
+      if (ranked[0]?.score > 0 && ranked[0].score > (ranked[1]?.score || 0)) return ranked[0].start;
     }
-    if (rect.bottom > window.innerHeight) {
-      popup.style.top = y - rect.height - 10 + 'px'
-    }
-
-    console.log('✅ Popup positioned and shown')
+    // Ambiguous legacy quotes stay in the library rather than marking the wrong passage.
+    return -1;
   }
-
-  function hidePopup () {
-    if (!popup || popup.style.display !== 'block') return
-
-    console.log('👁️‍🗨️ Hiding popup...')
-    popup.style.display = 'none'
-    setTimeout(() => window.getSelection().removeAllRanges(), 50)
-    currentSelection = null
-    console.log('✅ Popup hidden')
-  }
-
-  async function highlightSelection (color) {
-    if (!currentSelection) {
-      console.warn('⚠️ No current selection to highlight')
-      return
-    }
-
-    console.log('🖍️ Creating highlight with color:', color)
-
+  function restore() {
+    if (syncing) return;
+    syncing = true; observer.disconnect();
     try {
-      const range = currentSelection.range
-      const highlight = document.createElement('span')
-      highlight.className = `text-marker-highlight-${color}`
-      highlight.setAttribute('data-marker-color', color)
-      const markerId = generateId()
-      highlight.setAttribute('data-marker-id', markerId)
-
-      range.surroundContents(highlight)
-      console.log('📍 Highlight element created with ID:', markerId)
-
-      await saveHighlight(highlight, currentSelection.text, color)
-      console.log('✅ Highlight saved successfully')
-    } catch (error) {
-      console.error('❌ Could not highlight selection:', error)
-    }
-
-    currentSelection = null
+      const savedIds = new Set(records.map(item => item.id));
+      for (const span of document.querySelectorAll(`[${ATTR}]`)) if (!savedIds.has(span.getAttribute(ATTR))) unwrap(span.getAttribute(ATTR));
+      for (const item of records) {
+        if ([...document.querySelectorAll(`[${ATTR}]`)].some(span => span.getAttribute(ATTR) === item.id)) continue;
+        const map = textMap(), start = locate(item, map.text);
+        if (start >= 0) paint(item, start, start + item.text.length, map);
+      }
+    } finally { syncing = false; observer.observe(document.body, { childList: true, subtree: true, characterData: true }); }
   }
-
-  async function removeHighlight () {
-    if (!currentSelection) {
-      console.warn('⚠️ No current selection to remove highlight from')
-      return
-    }
-
-    console.log('🗑️ Removing highlight from current selection...')
-
-    const range = currentSelection.range
-    const container = range.commonAncestorContainer
-    let highlightElement =
-      container.nodeType === Node.TEXT_NODE
-        ? container.parentElement
-        : container
-
-    if (highlightElement?.hasAttribute('data-marker-id')) {
-      const markerId = highlightElement.getAttribute('data-marker-id')
-      console.log('📍 Found highlight to remove:', markerId)
-
-      await removeHighlightFromStorage(markerId)
-      const parent = highlightElement.parentNode
-      parent.replaceChild(
-        document.createTextNode(highlightElement.textContent),
-        highlightElement
-      )
-      parent.normalize()
-
-      console.log('✅ Highlight removed')
-    } else {
-      console.warn('⚠️ No highlight found in current selection')
-    }
-
-    currentSelection = null
-  }
-
-  function generateId () {
-    const id = Date.now().toString(36) + Math.random().toString(36).substring(2)
-    console.log('🔑 Generated ID:', id)
-    return id
-  }
-
-  async function saveHighlight (element, text, color) {
-    const markerId = element.getAttribute('data-marker-id')
-    console.log('💾 Saving highlight:', {
-      markerId,
-      text: text.substring(0, 30) + '...',
-      color
-    })
-
+  async function load() {
     try {
-      const result = await chrome.storage.local.get([STORAGE_KEY])
-      const stored = result[STORAGE_KEY] || {}
-      const highlights = stored[pageUrl] || []
-
-      const highlightData = {
-        id: markerId,
-        text,
-        color,
-        xpath: getXPath(element),
-        timestamp: Date.now(),
-        pageUrl
-      }
-
-      highlights.push(highlightData)
-      stored[pageUrl] = highlights
-
-      await chrome.storage.local.set({ [STORAGE_KEY]: stored })
-      console.log(
-        '✅ Highlight saved to storage. Total highlights for this page:',
-        highlights.length
-      )
-    } catch (error) {
-      console.error('❌ Error saving highlight:', error)
+      const stored = (await chrome.storage.local.get(KEY))[KEY];
+      records = entries(stored).filter(item => pageKey(item.pageUrl) === currentUrl);
+      restore();
+    } catch { /* An extension update may invalidate this tab; the popup asks for a reload. */ }
+  }
+  async function add(color) {
+    if (!selected?.range) return;
+    const map = textMap(), position = offsets(selected.range, map);
+    if (!position) return hide();
+    if (map.nodes.some(part => part.end > position.start && part.start < position.end && part.node.parentElement.closest(`[${ATTR}]`))) {
+      error('This selection overlaps a highlight. Remove it first.'); return;
     }
+    const item = { id: crypto.randomUUID(), text: map.text.slice(position.start, position.end), color, timestamp: Date.now(), title: document.title,
+      anchor: { ...position, prefix: map.text.slice(Math.max(0, position.start - 40), position.start), suffix: map.text.slice(position.end, position.end + 40) } };
+    if (await mutate({ operation: 'add', item })) { await load(); window.getSelection().removeAllRanges(); hide(); }
   }
-
-  async function removeHighlightFromStorage (markerId) {
-    console.log('💾 Removing highlight from storage:', markerId)
-
-    try {
-      const result = await chrome.storage.local.get([STORAGE_KEY])
-      const stored = result[STORAGE_KEY] || {}
-      const highlights = stored[pageUrl] || []
-
-      const filteredHighlights = highlights.filter(h => h.id !== markerId)
-      stored[pageUrl] = filteredHighlights
-
-      await chrome.storage.local.set({ [STORAGE_KEY]: stored })
-      console.log(
-        '✅ Highlight removed from storage. Remaining highlights:',
-        filteredHighlights.length
-      )
-    } catch (error) {
-      console.error('❌ Error removing highlight from storage:', error)
-    }
+  function show(rect) {
+    root.querySelector('p').hidden = true;
+    root.querySelector('.remove').hidden = !selected?.id;
+    host.style.display = 'block';
+    host.style.left = `${Math.max(8, Math.min(rect.left, innerWidth - 268))}px`;
+    host.style.top = `${Math.max(8, Math.min(rect.bottom + 10, innerHeight - host.getBoundingClientRect().height - 8))}px`;
   }
-
-  async function loadHighlights () {
-    console.log('📚 Loading existing highlights for page...')
-
-    try {
-      const result = await chrome.storage.local.get([STORAGE_KEY])
-      const stored = result[STORAGE_KEY] || {}
-      const highlights = stored[pageUrl] || []
-
-      console.log('📊 Found highlights to restore:', highlights.length)
-
-      if (!highlights.length) {
-        console.log('📝 No highlights found for this page')
-        return
-      }
-
-      let retry = 0
-      const maxRetries = 3
-
-      function attempt () {
-        console.log(`🔄 Restoration attempt ${retry + 1}/${maxRetries + 1}...`)
-        let restored = 0
-
-        for (const highlight of highlights) {
-          if (restoreHighlight(highlight)) {
-            restored++
-          }
-        }
-
-        console.log(`📈 Restored ${restored}/${highlights.length} highlights`)
-
-        if (restored < highlights.length && retry < maxRetries) {
-          retry++
-          console.log(
-            `⏳ Some highlights failed to restore. Retrying in 1 second...`
-          )
-          setTimeout(attempt, 1000)
-        } else {
-          console.log('✅ Highlight restoration completed')
-        }
-      }
-
-      // Wait a bit for page to fully load
-      setTimeout(attempt, 500)
-    } catch (error) {
-      console.error('❌ Error loading highlights:', error)
-    }
+  function selection() {
+    const value = window.getSelection();
+    if (!value?.rangeCount || value.isCollapsed || !value.toString().trim()) return;
+    const range = value.getRangeAt(0);
+    if (!document.body.contains(range.commonAncestorContainer)) return;
+    // Never read text from a selection crossing an editor or a form field.
+    const element = range.commonAncestorContainer.nodeType === 1 ? range.commonAncestorContainer : range.commonAncestorContainer.parentElement;
+    if (element.closest(excluded) || [...element.querySelectorAll(excluded)].some(node => range.intersectsNode(node))) return;
+    selected = { range: range.cloneRange() }; show(range.getBoundingClientRect());
   }
-
-  function restoreHighlight (highlight) {
-    console.log('🔄 Attempting to restore highlight:', {
-      id: highlight.id,
-      text: highlight.text?.substring(0, 30) + '...',
-      color: highlight.color
-    })
-
-    let element = getElementByXPath(highlight.xpath) || document.body
-    const nodes = getAllTextNodes(element)
-
-    for (let textNode of nodes) {
-      const start = textNode.textContent.indexOf(highlight.text)
-      if (start !== -1) {
-        console.log('📍 Found matching text node for highlight')
-
-        try {
-          const range = document.createRange()
-          range.setStart(textNode, start)
-          range.setEnd(textNode, start + highlight.text.length)
-
-          const span = document.createElement('span')
-          span.className = `text-marker-highlight-${highlight.color}`
-          span.setAttribute('data-marker-color', highlight.color)
-          span.setAttribute('data-marker-id', highlight.id)
-
-          span.appendChild(range.extractContents())
-          range.insertNode(span)
-
-          console.log('✅ Highlight restored successfully')
-          return true
-        } catch (error) {
-          console.warn('⚠️ Failed to restore highlight:', error)
-        }
-      }
-    }
-
-    console.warn('⚠️ Could not find matching text for highlight:', highlight.id)
-    return false
-  }
-
-  function getAllTextNodes (element) {
-    const nodes = []
-    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, {
-      acceptNode: node => {
-        if (
-          node.parentNode?.hasAttribute?.('data-marker-id') ||
-          !node.textContent.trim()
-        ) {
-          return NodeFilter.FILTER_REJECT
-        }
-        return NodeFilter.FILTER_ACCEPT
-      }
-    })
-
-    let node
-    while ((node = walker.nextNode())) {
-      nodes.push(node)
-    }
-    return nodes
-  }
-
-  function getXPath (el) {
-    if (el.id) return `//*[@id="${el.id}"]`
-    if (el === document.body) return '/html/body'
-
-    const ix =
-      Array.from(el.parentNode.childNodes)
-        .filter(n => n.tagName === el.tagName)
-        .indexOf(el) + 1
-
-    return getXPath(el.parentNode) + '/' + el.tagName.toLowerCase() + `[${ix}]`
-  }
-
-  function getElementByXPath (xpath) {
-    return document.evaluate(
-      xpath,
-      document,
-      null,
-      XPathResult.FIRST_ORDERED_NODE_TYPE,
-      null
-    ).singleNodeValue
-  }
-
-  // Initialize when DOM is ready
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-      console.log('📄 DOM loaded, initializing in 500ms...')
-      setTimeout(init, 500)
-    })
-  } else {
-    console.log('📄 DOM already loaded, initializing in 100ms...')
-    setTimeout(init, 100)
-  }
-})()
+  document.addEventListener('pointerup', event => {
+    if (event.composedPath().includes(host)) return;
+    setTimeout(selection, 0);
+  });
+  document.addEventListener('keyup', event => { if (event.key === 'Escape') hide(); else if (event.key.startsWith('Arrow') && event.shiftKey) selection(); });
+  document.addEventListener('pointerdown', event => { if (!event.composedPath().includes(host)) hide(); });
+  document.addEventListener('click', event => {
+    const span = event.target.closest?.(`[${ATTR}]`);
+    if (span && window.getSelection().isCollapsed) { selected = { id: span.getAttribute(ATTR) }; show(span.getBoundingClientRect()); }
+  });
+  document.addEventListener('scroll', hide, { passive: true });
+  window.addEventListener('resize', hide);
+  chrome.storage.onChanged.addListener((changes, area) => { if (area === 'local' && changes[KEY]) load(); });
+  chrome.runtime.onMessage.addListener((message, sender, respond) => {
+    if (message?.type !== 'marker:focus') return;
+    const span = [...document.querySelectorAll(`[${ATTR}]`)].find(node => node.getAttribute(ATTR) === message.id);
+    if (span) { span.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'center' }); span.animate([{ outline:'3px solid #297357' },{ outline:'3px solid transparent' }], {duration:1600}); }
+    respond({ found: !!span });
+  });
+  const observer = new MutationObserver(() => { clearTimeout(scheduled); scheduled = setTimeout(restore, 250); });
+  // SPA navigation changes the record set even when the content script stays alive.
+  setInterval(() => { const next = pageKey(location.href); if (next !== currentUrl) { hide(); unwrap(); currentUrl = next; load(); } }, 700);
+  load();
+})();
