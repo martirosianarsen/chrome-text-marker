@@ -13,6 +13,7 @@ window.addEventListener('storage',notify); window.addEventListener('marker-demo-
 window.chrome = {storage:{local:{async get(){return {[KEY]:read(),[TextMarker.PALETTE_KEY]:palette()}},async set(value){if(value[TextMarker.PALETTE_KEY])localStorage.setItem(paletteKey,JSON.stringify(value[TextMarker.PALETTE_KEY]));broadcast();}},onChanged:{addListener(fn){listeners.push(fn)}}},runtime:{async openOptionsPage(){window.open('preview-settings.html','_blank')},onMessage:{addListener(){}},async sendMessage(message){
  let stored=read(); const key=TextMarker.pageKey(message.url), list=stored[key]||[];
  if(message.operation==='add')stored[key]=[...list,message.item];
+ if(message.operation==='recolor')stored[key]=list.map(item=>item.id===message.id?{...item,color:message.color}:item);
  if(message.operation==='remove')stored[key]=list.filter(item=>item.id!==message.id);
  if(message.operation==='clearPage')delete stored[key];
  if(message.operation==='clearAll')stored={};

@@ -14,6 +14,7 @@ Text Marker is a simple, private way to collect meaningful passages as you read.
 
 • A clean, calm interface with five preset colors and a custom color picker.
 • Set your preferred five-color palette in a dedicated settings page.
+• Click an existing highlight to change its color without selecting the text again.
 • Copy selected text or any saved highlight with a single click.
 • Browse highlights from the current page or your whole collection.
 • Search by passage, page title, or address.

@@ -12,7 +12,7 @@
   const root = host.attachShadow({ mode: 'open' });
   root.innerHTML = `<style>
     :host{color-scheme:light}*{box-sizing:border-box}section{width:252px;padding:14px;background:#fff;border:1px solid #e4e5e9;border-radius:16px;box-shadow:0 8px 32px #202b3824;font:13px system-ui;color:#26352f}
-    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}strong{font-size:12px;font-weight:650}small{font-size:10px;color:#78847c}.colors{display:flex;gap:10px}button{cursor:pointer;font:inherit;border:0;background:transparent;color:inherit}button:focus-visible{outline:2px solid #22664d;outline-offset:3px}.swatch{width:36px;height:36px;border-radius:50%;border:1px solid #00000012;transition:transform .15s}.swatch:hover{transform:translateY(-3px)}footer{display:flex;justify-content:space-between;align-items:center;margin-top:12px}.custom{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:12px;padding-top:10px;border-top:1px solid #e4e5e9;font-size:11px}.custom label{display:flex;align-items:center;gap:8px}.custom input{width:30px;height:26px;padding:1px;border:1px solid #e4e5e9;border-radius:5px;cursor:pointer;background:white}.custom button{background:#edf2e7;border-radius:5px;padding:5px 8px;color:#316c50}.copy{font-size:11px;color:#316c50;padding:4px 6px;border:1px solid #e4e5e9;border-radius:5px}.remove{font-size:11px;color:#9e433b;padding:4px 0}.close{font-size:18px;line-height:1;padding:0 3px}p{margin:9px 0 0;font-size:11px;line-height:1.5;color:#9e433b}[hidden]{display:none}
+    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}strong{font-size:12px;font-weight:650}small{font-size:10px;color:#78847c}.colors{display:flex;gap:10px}button{cursor:pointer;font:inherit;border:0;background:transparent;color:inherit}button:focus-visible{outline:2px solid #22664d;outline-offset:3px}.swatch{width:36px;height:36px;border-radius:50%;border:1px solid #00000012;transition:transform .15s}.swatch:hover{transform:translateY(-3px)}.swatch[aria-pressed=true]{outline:2px solid #316c50;outline-offset:3px}footer{display:flex;justify-content:space-between;align-items:center;margin-top:12px}.custom{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:12px;padding-top:10px;border-top:1px solid #e4e5e9;font-size:11px}.custom label{display:flex;align-items:center;gap:8px}.custom input{width:30px;height:26px;padding:1px;border:1px solid #e4e5e9;border-radius:5px;cursor:pointer;background:white}.custom button{background:#edf2e7;border-radius:5px;padding:5px 8px;color:#316c50}.copy{font-size:11px;color:#316c50;padding:4px 6px;border:1px solid #e4e5e9;border-radius:5px}.remove{font-size:11px;color:#9e433b;padding:4px 0}.close{font-size:18px;line-height:1;padding:0 3px}p{margin:9px 0 0;font-size:11px;line-height:1.5;color:#9e433b}[hidden]{display:none}
     @media(prefers-reduced-motion:reduce){*{transition:none!important}}
   </style><section role="dialog" aria-label="Highlight selected text"><header><strong>Mark this moment</strong><button class="close" aria-label="Close color picker">×</button></header><div class="colors"></div><div class="custom"><label>Custom color <input type="color" aria-label="Custom highlight color" value="#b8b3f6"></label><button class="custom-apply" aria-label="Apply custom highlight color">Apply</button></div><footer><small>Text Marker</small><button class="copy">Copy text</button><button class="remove" hidden>Remove</button></footer><p role="status" hidden></p></section>`;
   document.documentElement.append(host);
@@ -21,7 +21,7 @@
     root.querySelector('.colors').replaceChildren();
     Object.entries(palette).forEach(([name, hex], index) => {
       const button = document.createElement('button');
-      button.className = 'swatch'; button.style.background = hex;
+      button.className = 'swatch'; button.style.background = hex; button.dataset.color = hex;
       button.setAttribute('aria-label', `Highlight preset ${index + 1}`); button.title = `Color ${index + 1}: ${hex}`;
       button.addEventListener('click', () => add(hex));
       root.querySelector('.colors').append(button);
@@ -81,11 +81,14 @@
       range.setEnd(part.node, Math.min(part.node.length, end - part.start));
       const span = document.createElement('span');
       span.setAttribute(ATTR, item.id); span.className = 'text-marker-highlight';
-      span.style.setProperty('background-color', TextMarker.colorValue(item.color), 'important');
-      span.style.setProperty('color', TextMarker.foreground(item.color), 'important');
+      styleHighlight(span, item.color);
       range.surroundContents(span);
     }
     return true;
+  }
+  function styleHighlight(span, color) {
+    span.style.setProperty('background-color', TextMarker.colorValue(color), 'important');
+    span.style.setProperty('color', TextMarker.foreground(color), 'important');
   }
   function unwrap(id) {
     for (const span of document.querySelectorAll(`[${ATTR}]`)) {
@@ -116,7 +119,8 @@
       const savedIds = new Set(records.map(item => item.id));
       for (const span of document.querySelectorAll(`[${ATTR}]`)) if (!savedIds.has(span.getAttribute(ATTR))) unwrap(span.getAttribute(ATTR));
       for (const item of records) {
-        if ([...document.querySelectorAll(`[${ATTR}]`)].some(span => span.getAttribute(ATTR) === item.id)) continue;
+        const existing = [...document.querySelectorAll(`[${ATTR}]`)].filter(span => span.getAttribute(ATTR) === item.id);
+        if (existing.length) { existing.forEach(span => styleHighlight(span, item.color)); continue; }
         const map = textMap(), start = locate(item, map.text);
         if (start >= 0) paint(item, start, start + item.text.length, map);
       }
@@ -130,6 +134,10 @@
     } catch { /* An extension update may invalidate this tab; the popup asks for a reload. */ }
   }
   async function add(color) {
+    if (selected?.id) {
+      if (await mutate({ operation: 'recolor', id: selected.id, color })) { await load(); hide(); }
+      return;
+    }
     if (!selected?.range) return;
     const map = textMap(), position = offsets(selected.range, map);
     if (!position) return hide();
@@ -143,6 +151,11 @@
   function show(rect) {
     root.querySelector('p').hidden = true;
     root.querySelector('.remove').hidden = !selected?.id;
+    root.querySelector('strong').textContent = selected?.id ? 'Change highlight color' : 'Mark this moment';
+    const item = records.find(item => item.id === selected?.id);
+    const currentColor = item ? TextMarker.colorValue(item.color).toLowerCase() : '';
+    if (item) root.querySelector('input[type=color]').value = currentColor;
+    root.querySelectorAll('.swatch').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.color.toLowerCase() === currentColor)));
     host.style.display = 'block';
     host.style.left = `${Math.max(8, Math.min(rect.left, innerWidth - 268))}px`;
     host.style.top = `${Math.max(8, Math.min(rect.bottom + 10, innerHeight - host.getBoundingClientRect().height - 8))}px`;

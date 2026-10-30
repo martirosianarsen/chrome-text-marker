@@ -193,3 +193,46 @@ test('color settings save a live palette, preserve old marks, persist, and reset
   await expect(page.getByRole('button',{name:'Highlight preset 1',exact:true})).toHaveCSS('background-color','rgb(255, 229, 138)');
   await p.close();await settings.close();await page.close();
 });
+
+test('clicking an existing multi-element highlight recolors it without recreating it',async () => {
+  const a=await open('/recolor'); await mark(a,'#mixed');
+  const original=Object.values(await data())[0][0];
+  const b=await open('/recolor');
+  await expect(b.locator('#mixed [data-text-marker-id]')).toHaveCount(3);
+  const p=await popup(); await p.getByRole('tab',{name:'All pages'}).click();
+  await a.locator('#mixed [data-text-marker-id]').first().click();
+  await expect(a.getByRole('dialog')).toBeVisible();
+  await expect(a.getByText('Change highlight color',{exact:true})).toBeVisible();
+  await expect(a.getByLabel('Custom highlight color',{exact:true})).toHaveValue('#ffe58a');
+  await a.getByRole('button',{name:'Highlight preset 3',exact:true}).click();
+  await expect(a.getByRole('dialog')).toBeHidden();
+  for(const page of [a,b]) {
+    await expect(page.locator('#mixed [data-text-marker-id]')).toHaveCount(3);
+    for(const span of await page.locator('#mixed [data-text-marker-id]').all()) await expect(span).toHaveCSS('background-color','rgb(184, 217, 255)');
+    await expect(page.locator('#mixed em')).toHaveText('change the way');
+  }
+  await expect(p.locator('.color-dot')).toHaveCSS('background-color','rgb(184, 217, 255)');
+  await a.locator('#mixed [data-text-marker-id]').last().click();
+  await a.getByLabel('Custom highlight color',{exact:true}).fill('#31205f');
+  await a.getByRole('button',{name:'Apply custom highlight color',exact:true}).click();
+  await expect(a.getByRole('dialog')).toBeHidden();
+  const current=Object.values(await data())[0];
+  expect(current).toHaveLength(1);expect(current[0]).toEqual({...original,color:'#31205f'});
+  await expect(b.locator('#mixed [data-text-marker-id]').first()).toHaveCSS('background-color','rgb(49, 32, 95)');
+  await expect(b.locator('#mixed [data-text-marker-id]').first()).toHaveCSS('color','rgb(255, 255, 255)');
+  await a.reload();await expect(a.locator('#mixed [data-text-marker-id]')).toHaveCount(3);
+  await expect(a.locator('#mixed [data-text-marker-id]').first()).toHaveCSS('background-color','rgb(49, 32, 95)');
+  await p.close();await a.close();await b.close();
+});
+test('legacy hash-specific highlights can be recolored without changing their identity',async () => {
+  const url=base+'/legacy-recolor#old';
+  const original={id:'old-mark',text:'A page worth remembering.',color:'green',timestamp:1,xpath:'/html/body/span[1]'};
+  await worker.evaluate(async ({url,original})=>chrome.storage.local.set({'text-marker-highlights':{[url]:[original]}}),{url,original});
+  const page=await open('/legacy-recolor#new');
+  await page.locator('#safe [data-text-marker-id]').click();
+  await page.getByRole('button',{name:'Highlight preset 4',exact:true}).click();
+  await expect(page.getByRole('dialog')).toBeHidden();
+  expect(await data()).toEqual({[url]:[{...original,color:'#fac8df'}]});
+  await expect(page.locator('#safe [data-text-marker-id]')).toHaveCount(1);
+  await page.close();
+});

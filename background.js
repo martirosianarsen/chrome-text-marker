@@ -19,6 +19,18 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
       const list = entries(stored).filter(item => pageKey(item.pageUrl) === url);
       for (const key of Object.keys(stored)) if (pageKey(key) === url) delete stored[key];
       stored[url] = [...list.filter(item => item.id !== message.item.id), { ...message.item, pageUrl: url }];
+    } else if (message.operation === 'recolor') {
+      if (typeof message.id !== 'string' || !TextMarker.isColor(message.color)) throw new Error('Invalid highlight color.');
+      let found = false;
+      for (const key of Object.keys(stored)) {
+        if (pageKey(key) !== url || !Array.isArray(stored[key])) continue;
+        stored[key] = stored[key].map(item => {
+          if (item.id !== message.id) return item;
+          found = true;
+          return { ...item, color: message.color };
+        });
+      }
+      if (!found) throw new Error('This highlight no longer exists.');
     } else if (message.operation === 'remove' || message.operation === 'clearPage') {
       for (const key of Object.keys(stored)) {
         if (pageKey(key) !== url) continue;
