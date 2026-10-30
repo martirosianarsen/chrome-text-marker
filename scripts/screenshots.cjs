@@ -9,5 +9,8 @@ const fs = require('node:fs/promises');
   await page.frameLocator('iframe').getByRole('button',{name:'The best ideas often begin with a small moment of attention.',exact:true}).waitFor();
   await page.screenshot({path:path.join(output,'text-marker-preview.png')});
   await page.locator('iframe').screenshot({path:path.join(output,'text-marker-popup.png')});
+  await page.frameLocator('iframe').getByRole('tab',{name:'All pages'}).click();
+  await page.frameLocator('iframe').getByRole('button',{name:'Delete all highlights',exact:true}).click();
+  await page.locator('iframe').screenshot({path:path.join(output,'text-marker-delete-all.png')});
   await browser.close();
 })();

@@ -18,7 +18,7 @@ Text Marker is a simple, private way to collect meaningful passages as you read.
 • Search by passage, page title, or address.
 • Jump to a highlight on the current page, or reopen its saved webpage.
 • Export your full collection as a JSON file.
-• Remove individual highlights or clear a page with confirmation.
+• Remove individual highlights, clear a page, or delete the full collection with confirmation.
 
 No account, ads, analytics, or cloud service. Your highlights, page addresses, titles, and text used to restore selections stay in your browser's local extension storage. Exported files stay on your device unless you share them yourself.
 

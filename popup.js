@@ -1,13 +1,14 @@
 'use strict';
 const { KEY, COLORS, pageKey, entries } = TextMarker;
 const $ = id => document.getElementById(id);
-let saved = [], url = '', tabId, all = false;
+let saved = [], url = '', tabId, all = false, pendingClear = null;
 function status(message) { $('status').textContent = message; $('status').hidden = !message; }
 const onPage = item => { try { return pageKey(item.pageUrl) === url; } catch { return false; } };
 function render() {
   const local = saved.filter(onPage), query = $('search').value.trim().toLocaleLowerCase();
   $('allCount').textContent = saved.length; $('pageCount').textContent = local.length;
   $('clearPage').hidden = all || !local.length;
+  $('clearAll').hidden = !all || !saved.length;
   $('export').disabled = !saved.length;
   $('scopeLabel').textContent = all ? 'YOUR SAVED COLLECTION' : 'SAVED ON THIS PAGE';
   $('list').replaceChildren();
@@ -43,8 +44,8 @@ function render() {
 }
 async function load() { try { saved = entries((await chrome.storage.local.get(KEY))[KEY]); render(); } catch { status('Could not load highlights. Reopen Text Marker to try again.'); } }
 async function mutate(change) {
-  try { const result = await chrome.runtime.sendMessage({ type:'marker:mutate',...change }); if (!result?.ok) throw new Error(result?.error); await load(); }
-  catch { status('Could not save changes. Try again or check your available browser storage.'); }
+  try { const result = await chrome.runtime.sendMessage({ type:'marker:mutate',...change }); if (!result?.ok) throw new Error(result?.error); await load(); return true; }
+  catch { status('Could not save changes. Try again or check your available browser storage.'); return false; }
 }
 async function focus(item) {
   let target; try { target = new URL(item.pageUrl); } catch { return status('This saved page has an invalid address.'); }
@@ -59,14 +60,34 @@ function setScope(value) {
   all = value;
   $('pageTab').setAttribute('aria-selected',String(!all)); $('allTab').setAttribute('aria-selected',String(all));
   $('list').setAttribute('aria-labelledby',all ? 'allTab' : 'pageTab');
-  $('confirm').hidden = true; render();
+  $('confirm').hidden = true; pendingClear = null; render();
 }
 $('pageTab').onclick = () => setScope(false); $('allTab').onclick = () => setScope(true);
 for (const id of ['pageTab','allTab']) $(id).onkeydown = event => { if (['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) { event.preventDefault(); setScope(event.key === 'End' || (event.key !== 'Home' && !all)); $(all ? 'allTab' : 'pageTab').focus(); } };
 $('search').oninput = render;
-$('clearPage').onclick = () => { $('confirm').hidden = false; $('cancelClear').focus(); };
-$('cancelClear').onclick = () => { $('confirm').hidden = true; $('clearPage').focus(); };
-$('confirmClear').onclick = async () => { await mutate({operation:'clearPage',url}); $('confirm').hidden = true; };
+function askClear(operation) {
+  pendingClear = operation;
+  $('confirmMessage').textContent = operation === 'clearAll'
+    ? `Delete all ${saved.length} highlights from every page? This cannot be undone. Export a copy first if you want to keep them.`
+    : 'Remove all highlights from this page?';
+  $('confirmClear').textContent = operation === 'clearAll' ? 'Delete all highlights' : 'Remove highlights';
+  $('confirm').hidden = false; $('cancelClear').focus();
+}
+$('clearPage').onclick = () => askClear('clearPage');
+$('clearAll').onclick = () => askClear('clearAll');
+$('cancelClear').onclick = () => { $('confirm').hidden = true; pendingClear = null; $(all ? 'clearAll' : 'clearPage').focus(); };
+$('confirmClear').onclick = async () => {
+  if (!pendingClear) return;
+  const operation = pendingClear;
+  $('confirmClear').disabled = true; $('cancelClear').disabled = true;
+  const success = await mutate({operation,url});
+  $('confirmClear').disabled = false; $('cancelClear').disabled = false;
+  if (success) {
+    $('confirm').hidden = true; pendingClear = null;
+    status(operation === 'clearAll' ? 'All highlights deleted from every page.' : 'Highlights removed from this page.');
+    $(all ? 'allTab' : 'pageTab').focus();
+  }
+};
 $('export').onclick = () => {
   const blob = new Blob([JSON.stringify({ format:'text-marker',version:1,exportedAt:new Date().toISOString(),highlights:saved },null,2)],{type:'application/json'});
   const address = URL.createObjectURL(blob), anchor = document.createElement('a');

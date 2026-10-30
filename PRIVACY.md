@@ -16,7 +16,7 @@ Storage keeps your highlights on your device. Active tab lets the popup identify
 
 ## Your control
 
-Remove individual highlights or clear a page in the popup. Use All pages to find and remove records from other pages. You can also export a copy. Uninstalling the extension removes its local Chrome storage. Exported files remain until you delete them yourself. There is no cloud backup or automatic sync.
+Remove individual highlights, clear a page, or delete your full collection with confirmation from All pages in the popup. Use All pages to find and remove records from other pages. You can also export a copy. Uninstalling the extension removes its local Chrome storage. Exported files remain until you delete them yourself. There is no cloud backup or automatic sync.
 
 ## Contact
 

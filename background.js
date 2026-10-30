@@ -5,6 +5,11 @@ let queue = Promise.resolve();
 chrome.runtime.onMessage.addListener((message, sender, respond) => {
   if (message?.type !== 'marker:mutate') return;
   queue = queue.catch(() => {}).then(async () => {
+    if (message.operation === 'clearAll') {
+      if (!sender.url?.startsWith(chrome.runtime.getURL(''))) throw new Error('Use the extension popup to clear your collection.');
+      await chrome.storage.local.set({ [KEY]: {} });
+      return { ok: true };
+    }
     const stored = (await chrome.storage.local.get(KEY))[KEY] || {};
     const url = pageKey(sender.url?.startsWith('chrome-extension:') ? message.url : (sender.tab?.url || message.url));
     if (!/^https?:/.test(url)) throw new Error('This page is not supported.');

@@ -9,10 +9,11 @@ const read = () => JSON.parse(localStorage.getItem(demoKey));
 const notify = () => listeners.forEach(fn=>fn({[KEY]:{newValue:read()}},'local'));
 window.addEventListener('storage',notify); window.addEventListener('marker-demo-change',notify);
 window.chrome = {storage:{local:{async get(){return {[KEY]:read()}}},onChanged:{addListener(fn){listeners.push(fn)}}},runtime:{onMessage:{addListener(){}},async sendMessage(message){
- const stored=read(), key=TextMarker.pageKey(message.url), list=stored[key]||[];
+ let stored=read(); const key=TextMarker.pageKey(message.url), list=stored[key]||[];
  if(message.operation==='add')stored[key]=[...list,message.item];
  if(message.operation==='remove')stored[key]=list.filter(item=>item.id!==message.id);
  if(message.operation==='clearPage')delete stored[key];
+ if(message.operation==='clearAll')stored={};
  localStorage.setItem(demoKey,JSON.stringify(stored));notify();
  for(const frame of parent.frames)frame.dispatchEvent(new Event('marker-demo-change'));
  parent.dispatchEvent(new Event('marker-demo-change'));return {ok:true};

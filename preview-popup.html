@@ -8,10 +8,10 @@
     <div class="library-heading"><h2>Your highlights <span id="allCount">0</span></h2><button id="export" class="icon-button" title="Export all highlights" aria-label="Export all highlights"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 16v5h14v-5"/></svg></button></div>
     <div class="tabs" role="tablist" aria-label="Highlight scope"><button id="pageTab" role="tab" aria-selected="true">This page <span id="pageCount">0</span></button><button id="allTab" role="tab" aria-selected="false">All pages</button></div>
     <label class="search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg><input id="search" type="search" placeholder="Find a saved thought…" aria-label="Search highlights"></label>
-    <div class="list-meta"><span id="scopeLabel">SAVED ON THIS PAGE</span><button id="clearPage" class="text-button" hidden>Clear page</button></div>
+    <div class="list-meta"><span id="scopeLabel">SAVED ON THIS PAGE</span><button id="clearPage" class="text-button" hidden>Clear page</button><button id="clearAll" class="text-button" hidden>Delete all highlights</button></div>
     <div id="status" role="status" hidden></div>
     <div id="list" role="tabpanel" aria-labelledby="pageTab" aria-live="polite"></div>
-    <div id="confirm" class="confirm" hidden><p>Remove all highlights from this page?</p><div><button id="cancelClear">Keep them</button><button id="confirmClear" class="danger">Remove highlights</button></div></div>
+    <div id="confirm" class="confirm" role="region" aria-label="Confirm highlight deletion" hidden><p id="confirmMessage">Remove all highlights from this page?</p><div><button id="cancelClear">Keep them</button><button id="confirmClear" class="danger">Remove highlights</button></div></div>
   </main>
   <footer><span><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3m-4 4v3"/></svg>Only on your device. Always yours.</span><a href="privacy.html" target="_blank">Privacy ↗</a></footer>
   <script src="shared.js"></script><script src="preview.js"></script><script src="popup.js"></script>

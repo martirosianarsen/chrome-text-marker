@@ -8,7 +8,7 @@ A private webpage text highlighter for Chrome. Version 1.1.0 refreshes the popup
 
 Select text on an ordinary webpage, then choose one of five pastel colors. The picker also copies selected text. Click a highlighted passage to copy or remove it.
 
-Open the extension to browse the current page or all pages, search your saved passages, copy them, export a JSON copy, or remove them. Clicking a passage on the current page scrolls to it; a passage from another page opens its saved URL.
+Open the extension to browse the current page or all pages, search your saved passages, copy them, export a JSON copy, or remove them. In All pages, Delete all highlights clears the full collection after confirmation. Clicking a passage on the current page scrolls to it; a passage from another page opens its saved URL.
 
 All data stays in local extension storage. No telemetry, accounts, or external code. [Privacy policy](PRIVACY.md).
 

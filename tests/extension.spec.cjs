@@ -124,3 +124,25 @@ test('copies selected text and saved passages to the clipboard',async () => {
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('A page worth remembering.');
   await p.close(); await page.close();
 });
+
+test('delete all requires confirmation, respects cancellation, and clears every open page',async () => {
+  const a=await open('/clear-a'), b=await open('/clear-b');
+  await mark(a,'#safe'); await mark(b,'#safe','green');
+  const p=await popup(); await p.getByRole('tab',{name:'All pages'}).click();
+  await p.getByRole('button',{name:'Delete all highlights',exact:true}).click();
+  await expect(p.locator('#confirmMessage')).toContainText('Delete all 2 highlights from every page?');
+  expect(Object.keys(await data())).toHaveLength(2);
+  await p.getByRole('button',{name:'Keep them',exact:true}).click();
+  await expect(p.locator('#confirm')).toBeHidden();
+  await expect(a.locator('[data-text-marker-id]')).toHaveCount(1);
+  await expect(b.locator('[data-text-marker-id]')).toHaveCount(1);
+  await p.getByRole('button',{name:'Delete all highlights',exact:true}).click();
+  await p.locator('#confirmClear').click();
+  await expect.poll(data).toEqual({});
+  await expect(a.locator('[data-text-marker-id]')).toHaveCount(0);
+  await expect(b.locator('[data-text-marker-id]')).toHaveCount(0);
+  await expect(p.locator('.card')).toHaveCount(0);
+  await expect(p.locator('#clearAll')).toBeHidden();
+  await expect(p.getByRole('status')).toHaveText('All highlights deleted from every page.');
+  await p.close(); await a.close(); await b.close();
+});
