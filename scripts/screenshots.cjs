@@ -1,0 +1,37 @@
+const { chromium } = require('@playwright/test');
+const path = require('node:path');
+const fs = require('node:fs/promises');
+(async () => {
+  const output = path.resolve(process.argv[2] || 'dist'); await fs.mkdir(output,{recursive:true});
+  const browser = await chromium.launch({channel:'chromium',headless:true});
+  const page = await browser.newPage({viewport:{width:1280,height:800},deviceScaleFactor:1});
+  await page.goto('http://127.0.0.1:8765/preview.html');
+  await page.frameLocator('iframe').getByRole('button',{name:'The best ideas often begin with a small moment of attention.',exact:true}).waitFor();
+  await page.screenshot({path:path.join(output,'text-marker-preview.png')});
+  await page.locator('iframe').screenshot({path:path.join(output,'text-marker-popup.png')});
+  await page.frameLocator('iframe').getByRole('tab',{name:'All pages'}).click();
+  await page.frameLocator('iframe').getByRole('button',{name:'Delete all highlights',exact:true}).click();
+  await page.locator('iframe').screenshot({path:path.join(output,'text-marker-delete-all.png')});
+  await page.frameLocator('iframe').locator('#confirmClear').click();
+  await page.frameLocator('iframe').getByRole('status').filter({hasText:'All highlights deleted from every page.'}).waitFor();
+  await page.locator('article p').first().evaluate(element => {
+    const range=document.createRange();range.selectNodeContents(element);
+    getSelection().removeAllRanges();getSelection().addRange(range);
+    element.dispatchEvent(new PointerEvent('pointerup',{bubbles:true}));
+  });
+  await page.getByLabel('Custom highlight color',{exact:true}).fill('#31205f');
+  await page.screenshot({path:path.join(output,'text-marker-custom-color.png')});
+  await page.getByRole('button',{name:'Apply custom highlight color',exact:true}).click();
+  await page.getByRole('dialog').waitFor({state:'hidden'});
+  await page.locator('[data-text-marker-id]').first().click();
+  await page.getByText('Change highlight color',{exact:true}).waitFor();
+  await page.getByRole('dialog').screenshot({path:path.join(output,'text-marker-recolor.png')});
+  await page.getByRole('button',{name:'Highlight preset 3',exact:true}).click();
+  await page.getByRole('dialog').waitFor({state:'hidden'});
+  const settingsOpened = page.context().waitForEvent('page');
+  await page.frameLocator('iframe').getByRole('button',{name:'Color settings',exact:true}).click();
+  const settings = await settingsOpened;
+  await settings.getByRole('heading',{name:'Your colors, your way.',exact:true}).waitFor();
+  await settings.locator('main').screenshot({path:path.join(output,'text-marker-settings.png')});
+  await browser.close();
+})();

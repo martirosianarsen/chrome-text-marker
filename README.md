@@ -1,48 +1,40 @@
-# Text Marker – Powerful Webpage Text Highlighter
----
-[![Chrome Web Store](https://img.shields.io/chrome-web-store/v/njeijdibkglhjgjcjlpkapbojpegfcll.svg?label=Chrome%20Web%20Store)](https://chromewebstore.google.com/detail/njeijdibkglhjgjcjlpkapbojpegfcll?utm_source=item-share-cb)
-[![Users](https://img.shields.io/chrome-web-store/users/njeijdibkglhjgjcjlpkapbojpegfcll.svg)](https://chromewebstore.google.com/detail/njeijdibkglhjgjcjlpkapbojpegfcll?utm_source=item-share-cb)
-[![Rating](https://img.shields.io/chrome-web-store/rating/njeijdibkglhjgjcjlpkapbojpegfcll.svg)](https://chromewebstore.google.com/detail/njeijdibkglhjgjcjlpkapbojpegfcll?utm_source=item-share-cb)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)  
----
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/Z8Z41JH1LR)
----
+# Text Marker
 
-**Text Marker** is a free and privacy-focused Chrome extension that lets you **highlight text on any website**, **save your highlights**, and revisit them anytime.  
-Perfect for **students, researchers, writers, bloggers, and productivity enthusiasts** who need an **online text highlighter** with persistent storage.
+A private webpage text highlighter for Chrome. Version 1.1.0 refreshes the popup and selection picker while retaining highlights from 1.0.0.
 
----
+[Chrome Web Store](https://chromewebstore.google.com/detail/njeijdibkglhjgjcjlpkapbojpegfcll)
 
-## 🔹 Key Features
+## Use
 
-- **Highlight Text on Any Website** – Select text and apply custom background and font colors instantly.
-- **Multiple Highlight Colors** – Organize your notes, mark important passages, or color-code your research.
-- **Persistent Highlights** – All highlights are saved **locally in your browser** and remain after refreshing or reopening pages.
-- **Popup Manager** – See all saved highlights in one place, navigate to them instantly, or delete as needed.
-- **Offline & Privacy-Friendly** – No sign-up, no account, no tracking. Your data never leaves your browser.
-- **Lightweight & Fast** – Works smoothly without slowing down your browsing experience.
+Select text on an ordinary webpage, then choose one of five pastel colors or pick a custom color. The picker also copies selected text. Click a highlighted passage to change its color, copy it, or remove it.
 
----
+Open the extension to browse the current page or all pages, search your saved passages, copy them, export a JSON copy, or remove them. In All pages, Delete all highlights clears the full collection after confirmation. Clicking a passage on the current page scrolls to it; a passage from another page opens its saved URL.
 
-## 📌 Why Choose Text Marker?
+Use Color settings in the popup to choose your five preset colors or restore defaults. Saved palette changes appear on open webpages; existing highlights keep their original color.
 
-Unlike other web highlighters, **Text Marker** is:
-- **100% free** with no hidden limitations.
-- **Privacy-first** — nothing is sent to external servers.
-- **Simple but powerful** — easy to use, yet full of features for serious note-takers.
-- Designed for **research**, **studying**, **reading articles**, and **online learning**.
----
+All data stays in local extension storage. No telemetry, accounts, or external code. [Privacy policy](PRIVACY.md).
 
-## 📄 License
-This project is licensed under the **MIT License** – you are free to use, modify, and distribute it.
+Chrome internal pages, the Web Store, editable controls, and the built-in PDF viewer are unsupported. The content script runs in the top-level document; iframe and shadow-root text are not indexed. Changed or ambiguous passages may not restore automatically, but their saved text stays in the library. Export is a read-only JSON backup; importing is not implemented. Reload open tabs after installing an update.
 
----
+## Develop and verify
 
-## 🔎 Keywords
-`webpage highlighter`, `chrome extension text highlighter`, `highlight text online`, `persistent highlights`,  
-`highlight and save text`, `web annotation tool`, `offline highlighter`, `color code text`,  
-`privacy friendly highlighter`, `note taking chrome extension`, `save text highlights`
+Use Node.js 24+, Python 3.12+, and Chrome 111+.
 
----
+```sh
+npm ci
+npx playwright install chromium
+npm test
+python3 scripts/package.py
+```
 
-**📥 [Download from Chrome Web Store](https://chromewebstore.google.com/detail/njeijdibkglhjgjcjlpkapbojpegfcll?hl=en) and start highlighting today!**
+Load the repository folder using Chrome's **Extensions → Developer mode → Load unpacked** for development. The integration suite loads the real extension in an isolated Chrome profile and checks highlighting across HTML elements, duplicate quotes, reload restoration, legacy records, dynamic pages, concurrent writes, SPA navigation, editable fields, search, export, safe rendering, deletion, and copying.
+
+For the standalone design demo, run `python3 -m http.server 8765 --bind 127.0.0.1` and open `http://127.0.0.1:8765/preview.html`. The preview uses separate sample storage and is excluded from the Web Store ZIP.
+
+## Release
+
+The build script includes only runtime files and required icons. See [store listing and upload instructions](store/LISTING.md). Update the existing Store item to preserve its ID and the users' saved local data.
+
+Writes go through the service worker to serialize simultaneous changes from tabs and the popup. Records retain the original storage key and old hash-specific records are read without a destructive migration. New records use fragment-free URLs and text anchors. Query parameters remain significant to distinguish different documents.
+
+The original README described the project as MIT licensed, but the repository did not contain a license file. This change does not invent or replace license terms; the owner should supply the intended license separately.

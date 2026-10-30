@@ -1,0 +1,24 @@
+// Standalone design demo. No access to the installed extension's storage.
+(() => {
+const KEY='text-marker-highlights', demoKey='text-marker-design-preview', paletteKey='text-marker-preview-palette';
+const url = location.origin + '/preview.html';
+const seed = [{id:'demo-1',text:'The best ideas often begin with a small moment of attention.',color:'yellow',timestamp:Date.now(),title:'The art of paying attention',pageUrl:url},{id:'demo-2',text:'Leave a little space for curiosity.',color:'green',timestamp:Date.now()-86400000,title:'The art of paying attention',pageUrl:url}];
+if (!localStorage.getItem(demoKey)) localStorage.setItem(demoKey,JSON.stringify({[url]:seed}));
+const listeners = [];
+const read = () => JSON.parse(localStorage.getItem(demoKey));
+const palette = () => JSON.parse(localStorage.getItem(paletteKey) || 'null');
+const notify = () => listeners.forEach(fn=>fn({[KEY]:{newValue:read()},[TextMarker.PALETTE_KEY]:{newValue:palette()}},'local'));
+const broadcast = () => { notify(); for(let i=0;i<parent.frames.length;i++)parent.frames[i].dispatchEvent(new Event('marker-demo-change')); parent.dispatchEvent(new Event('marker-demo-change')); };
+window.addEventListener('storage',notify); window.addEventListener('marker-demo-change',notify);
+window.chrome = {storage:{local:{async get(){return {[KEY]:read(),[TextMarker.PALETTE_KEY]:palette()}},async set(value){if(value[TextMarker.PALETTE_KEY])localStorage.setItem(paletteKey,JSON.stringify(value[TextMarker.PALETTE_KEY]));broadcast();}},onChanged:{addListener(fn){listeners.push(fn)}}},runtime:{async openOptionsPage(){window.open('preview-settings.html','_blank')},onMessage:{addListener(){}},async sendMessage(message){
+ let stored=read(); const key=TextMarker.pageKey(message.url), list=stored[key]||[];
+ if(message.operation==='add')stored[key]=[...list,message.item];
+ if(message.operation==='recolor')stored[key]=list.map(item=>item.id===message.id?{...item,color:message.color}:item);
+ if(message.operation==='remove')stored[key]=list.filter(item=>item.id!==message.id);
+ if(message.operation==='clearPage')delete stored[key];
+ if(message.operation==='clearAll')stored={};
+ localStorage.setItem(demoKey,JSON.stringify(stored));broadcast();return {ok:true};
+}},tabs:{async query(){return [{id:1,url}]},async create({url}){window.open(url,'_blank')},async sendMessage(id,message){
+ const node=[...parent.document.querySelectorAll('[data-text-marker-id]')].find(node=>node.getAttribute('data-text-marker-id')===message.id);node?.scrollIntoView({block:'center',behavior:'smooth'});return {found:!!node};
+}}};
+})();

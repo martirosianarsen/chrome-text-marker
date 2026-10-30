@@ -1,0 +1,26 @@
+{
+  "name": "chrome-text-marker",
+  "version": "1.1.0",
+  "description": "Private, local webpage text highlighter for Chrome",
+  "main": "content.js",
+  "scripts": {
+    "test": "playwright test",
+    "package": "python3 scripts/package.py"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/martirosianarsen/chrome-text-marker.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "UNLICENSED",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/martirosianarsen/chrome-text-marker/issues"
+  },
+  "homepage": "https://github.com/martirosianarsen/chrome-text-marker#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.64.1"
+  },
+  "private": true
+}

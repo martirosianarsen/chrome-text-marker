@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Text Marker</title><link rel="stylesheet" href="popup.css"></head>
+<body>
+  <header class="masthead"><div class="brand"><img class="brand-logo" src="icons/text_marker_48.png" width="40" height="40" alt=""><div><h1>Text Marker</h1></div></div><span class="version">1.1</span></header>
+  <main>
+    <div class="selection-hint"><span>Select text on a page to highlight it.</span><div class="palette" aria-label="Five highlight colors"><i style="--color:#ffe58a"></i><i style="--color:#bce9c6"></i><i style="--color:#b8d9ff"></i><i style="--color:#fac8df"></i><i style="--color:#ffd2a8"></i></div></div>
+    <div class="library-heading"><h2>Your highlights <span id="allCount">0</span></h2><div class="library-actions"><button id="settings" class="icon-button" title="Color settings" aria-label="Color settings"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 17h16M8 4v6m8 4v6"/></svg></button><button id="export" class="icon-button" title="Export all highlights" aria-label="Export all highlights"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 16v5h14v-5"/></svg></button></div></div>
+    <div class="tabs" role="tablist" aria-label="Highlight scope"><button id="pageTab" role="tab" aria-selected="true">This page <span id="pageCount">0</span></button><button id="allTab" role="tab" aria-selected="false">All pages</button></div>
+    <label class="search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg><input id="search" type="search" placeholder="Find a saved thought…" aria-label="Search highlights"></label>
+    <div class="list-meta"><span id="scopeLabel">SAVED ON THIS PAGE</span><button id="clearPage" class="text-button" hidden>Clear page</button><button id="clearAll" class="text-button" hidden>Delete all highlights</button></div>
+    <div id="status" role="status" hidden></div>
+    <div id="list" role="tabpanel" aria-labelledby="pageTab" aria-live="polite"></div>
+    <div id="confirm" class="confirm" role="region" aria-label="Confirm highlight deletion" hidden><p id="confirmMessage">Remove all highlights from this page?</p><div><button id="cancelClear">Keep them</button><button id="confirmClear" class="danger">Remove highlights</button></div></div>
+  </main>
+  <footer><span><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3m-4 4v3"/></svg>Only on your device. Always yours.</span><a href="privacy.html" target="_blank">Privacy ↗</a></footer>
+  <script src="shared.js"></script><script src="preview.js"></script><script src="popup.js"></script>
+</body></html>
