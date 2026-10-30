@@ -2,9 +2,9 @@
 <html lang="en">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Text Marker</title><link rel="stylesheet" href="popup.css"></head>
 <body>
-  <header class="masthead"><div class="brand"><img class="brand-logo" src="icons/text_marker_48.png" width="40" height="40" alt=""><div><h1>Text Marker</h1><p>A little color. A clearer mind.</p></div></div><span class="version">1.1</span></header>
+  <header class="masthead"><div class="brand"><img class="brand-logo" src="icons/text_marker_48.png" width="40" height="40" alt=""><div><h1>Text Marker</h1></div></div><span class="version">1.1</span></header>
   <main>
-    <section class="hero"><div class="eyebrow"><span class="live-dot"></span> YOUR READING, REMEMBERED</div><h2>Keep the words<br>that <span>stay with you.</span></h2><p>Select a passage on any webpage.<br>Pick a color. Make it yours.</p><div class="palette" aria-label="Five highlight colors"><i style="--color:#ffe58a"></i><i style="--color:#bce9c6"></i><i style="--color:#b8d9ff"></i><i style="--color:#fac8df"></i><i style="--color:#ffd2a8"></i><span>Small marks. Big ideas.</span></div></section>
+    <div class="selection-hint"><span>Select text on a page to highlight it.</span><div class="palette" aria-label="Five highlight colors"><i style="--color:#ffe58a"></i><i style="--color:#bce9c6"></i><i style="--color:#b8d9ff"></i><i style="--color:#fac8df"></i><i style="--color:#ffd2a8"></i></div></div>
     <div class="library-heading"><h2>Your highlights <span id="allCount">0</span></h2><button id="export" class="icon-button" title="Export all highlights" aria-label="Export all highlights"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 16v5h14v-5"/></svg></button></div>
     <div class="tabs" role="tablist" aria-label="Highlight scope"><button id="pageTab" role="tab" aria-selected="true">This page <span id="pageCount">0</span></button><button id="allTab" role="tab" aria-selected="false">All pages</button></div>
     <label class="search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg><input id="search" type="search" placeholder="Find a saved thought…" aria-label="Search highlights"></label>

@@ -15,7 +15,7 @@ window.chrome = {storage:{local:{async get(){return {[KEY]:read()}}},onChanged:{
  if(message.operation==='clearPage')delete stored[key];
  if(message.operation==='clearAll')stored={};
  localStorage.setItem(demoKey,JSON.stringify(stored));notify();
- for(const frame of parent.frames)frame.dispatchEvent(new Event('marker-demo-change'));
+ for(let i=0;i<parent.frames.length;i++)parent.frames[i].dispatchEvent(new Event('marker-demo-change'));
  parent.dispatchEvent(new Event('marker-demo-change'));return {ok:true};
 }},tabs:{async query(){return [{id:1,url}]},async create({url}){window.open(url,'_blank')},async sendMessage(id,message){
  const node=[...parent.document.querySelectorAll('[data-text-marker-id]')].find(node=>node.getAttribute('data-text-marker-id')===message.id);node?.scrollIntoView({block:'center',behavior:'smooth'});return {found:!!node};

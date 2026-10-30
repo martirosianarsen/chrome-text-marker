@@ -12,5 +12,7 @@ const fs = require('node:fs/promises');
   await page.frameLocator('iframe').getByRole('tab',{name:'All pages'}).click();
   await page.frameLocator('iframe').getByRole('button',{name:'Delete all highlights',exact:true}).click();
   await page.locator('iframe').screenshot({path:path.join(output,'text-marker-delete-all.png')});
+  await page.frameLocator('iframe').locator('#confirmClear').click();
+  await page.frameLocator('iframe').getByRole('status').filter({hasText:'All highlights deleted from every page.'}).waitFor();
   await browser.close();
 })();
